@@ -470,9 +470,40 @@
             }
           }
         reader.readAsDataURL(current_file);
+      } else if (current_file.type.indexOf('video/') == 0) {
+        reader.onload = function (event) {
+              var video = $('<video controls/>').attr('src', event.target.result).css('max-width', '742px');
+              $('#content').val(event.target.result).trigger('change');
+              $('#content').hide().after(video);
+        }
+        reader.readAsDataURL(current_file);
+      } else if (current_file.type.indexOf('audio/') == 0) {
+        reader.onload = function (event) {
+              var audio = $('<audio controls/>').attr('src', event.target.result);
+              $('#content').val(event.target.result).trigger('change');
+              $('#content').hide().after(audio);
+        }
+        reader.readAsDataURL(current_file);
       } else {
         reader.onload = function (event) {
           $('#content').val(event.target.result).trigger('change');
+
+          if (/[\x00\x08\x0B\x0C\x0E-\x1F]/.test(event.target.result)) {
+            reader.onload = function (binaryEvent) {
+              $('#content').val(binaryEvent.target.result).trigger('change');
+
+              var binaryIndicator = $('<a />').attr('class', 'btn');
+              binaryIndicator.text(' This type of file cannot be previewed - click here to download it instead');
+              binaryIndicator.attr('href', binaryEvent.target.result)
+              binaryIndicator.attr('target', '_blank');
+              $('<span />').attr('class', 'icon-info-sign').prependTo(binaryIndicator);
+              $('#content').hide().after(binaryIndicator);
+            }
+
+            reader.readAsDataURL(current_file);
+          } else {
+            $('#content').val(event.target.result).trigger('change');
+          }
         };
         reader.readAsText(current_file);
       }
@@ -631,24 +662,34 @@
         /* Decrypted content goes back to initial container*/
         $('#paste-content').text(content);
 
-        if (content.indexOf('data:image') == 0) {
-          // Display Image
-          $('#paste-content').hide();
-          var img = $('<img/>');
-          $(img).attr('src', content);
-          $(img).css('max-width', '742px');
-          $('#paste-content').after(img);
-
-          // Display Download button
+        if (content.indexOf('data:') == 0) {
+          // Disable the clone button.
           $('.btn-clone').hide();
 
-          var button = $('<a/>').attr('href', content);
-          $(button).attr('download', '0bin_' + document.location.pathname.split('/').pop());
-          $(button).addClass('btn');
-          $(button).html('<i class="icon-download"></i> Download');
-          $('.btn-clone').after(button);
+          $('.btn-download').attr('href', content);
 
+          if (content.indexOf('data:image') == 0) {
+            var img = $('<img/>').attr('src', content).css('max-width', '742px');
+            $('#paste-content').hide().after(img);
+          } else if (content.indexOf('data:video') == 0) {
+            var video = $('<video controls/>').attr('src', content).css('max-width', '742px');
+            $('#paste-content').hide().after(video);
+          } else if (content.indexOf('data:audio') == 0) {
+            var audio = $('<audio controls/>').attr('src', content);
+            $('#paste-content').hide().after(audio);
+          } else {
+            var binaryDownloadButton = $('<a />').attr('class', 'btn');
+            binaryDownloadButton.text(' This type of file cannot be previewed - click here to download it instead');
+            binaryDownloadButton.click(function() { $('.btn-download').click(); });
+            $('<span />').attr('class', 'icon-info-sign').prependTo(binaryDownloadButton);
+
+            $('#paste-content').hide().after(binaryDownloadButton);
+          }
+        } else {
+           var contentAsPlaintext = new Blob([ content ], { type: 'text/plain' });
+           $('.btn-download').attr('href', URL.createObjectURL(contentAsPlaintext));
         }
+
         bar.set('Code coloration...', '95%');
 
         /* Add a continuation to let the UI redraw */
@@ -705,7 +746,7 @@
             $('#paste-content').addClass('linenums');
             prettyPrint();
           } else {
-            if (content.indexOf('data:image') != 0) {
+            if ($('#paste-content').is(':visible')) {
               zerobin.message('info',
                 "The paste did not seem to be code, so it " +
                 "was not colorized. " +

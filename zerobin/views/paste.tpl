@@ -28,6 +28,7 @@
 
   <span class="paste-option btn-group top">
       <button class="btn btn-clone"><i class="icon-camera"></i>&nbsp;Clone</button>
+      <a class="btn btn-download" target="_blank"><i class="icon-download"></i>&nbsp;Download</button>
       <button class="btn">New Paste</button>
   </span>
 </p>
